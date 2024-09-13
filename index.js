@@ -9,7 +9,7 @@ const app = express();
 const port = 8080;
 
 app.use(cors({
-  origin: 'http://54.237.83.234:3001' 
+  origin: 'http://54.173.165.199:3000' 
 }));
 
 app.use(express.json());
@@ -60,13 +60,14 @@ app.get('/files', async (req, res) => {
   
     try {
       const data = await s3.listObjectsV2(params).promise();
+	console.log(data);
       const files = data.Contents.map(file => ({
         key: file.Key,
         url: `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.Key}`
       }));
       res.status(200).json(files);
     } catch (err) {
-      console.error('Error listing files:', err);
+      console.log('Error listing files:', err);
       res.status(500).send('Error listing files');
     }
 });
