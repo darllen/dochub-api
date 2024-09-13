@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const AWS = require('aws-sdk');
-const fs = require('fs');;
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
@@ -9,7 +9,7 @@ const app = express();
 const port = 8080;
 
 app.use(cors({
-  origin: 'http://54.173.165.199:3000' 
+  origin: 'http://44.196.241.153:3000' 
 }));
 
 app.use(express.json());
