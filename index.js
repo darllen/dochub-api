@@ -7,7 +7,6 @@ const path = require('path');
 const cors = require('cors');
 const app = express();
 const port = 8080;
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
 app.use(cors({
   origin: 'http://44.196.241.153:3000',
@@ -26,24 +25,26 @@ AWS.config.update({
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
 
-// Configuração do multer para upload de arquivos
 const upload = multer({ dest: 'uploads/' });
 const s3 = new AWS.S3();
 
-// Função para gerar ID único para o arquivo
 function generateUniqueFileId() {
-  return `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+  const timestamp = Date.now();
+  const randomPart = Math.floor(Math.random() * 1000000); 
+  return timestamp * 1000000 + randomPart;
 }
 
-// Função para armazenar metadados no DynamoDB
-async function storeFileMetadata(fileId, versionNumber, s3Url) {
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
+
+async function storeFileMetadata(fileId, versionNumber, fileMetadata, fileUrl) {
   const params = {
-    TableName: 'FileMetadata',
+    TableName: 'dochub-file-metadata',
     Item: {
       FileID: fileId,
       VersionNumber: versionNumber,
-      S3Url: s3Url,
-      Timestamp: new Date().toISOString() // Adiciona um timestamp
+      Metadata: fileMetadata,
+      FileUrl: fileUrl,
+      Timestamp: new Date().toISOString()
     }
   };
 
@@ -55,12 +56,11 @@ async function storeFileMetadata(fileId, versionNumber, s3Url) {
   }
 }
 
-// Rota para upload de arquivos
 app.post('/upload', upload.single('file'), async (req, res) => {
   const fileStream = fs.createReadStream(req.file.path);
   
   const fileId = generateUniqueFileId();
-  const versionNumber = 1; // Para controle de versão, pode ser incrementado conforme necessário
+  const versionNumber = 1; 
 
   const params = {
     Bucket: process.env.S3_BUCKET_NAME,
@@ -90,24 +90,24 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// Rota para listar arquivos
-app.get('/files', async (req, res) => {
+app.get('/files/metadata', async (req, res) => {
   const params = {
-    Bucket: process.env.S3_BUCKET_NAME,
-    Prefix: 'files/', // Se você quiser listar apenas arquivos em um prefixo específico
+      TableName: 'dochub-file-metadata' // Nome da sua tabela do DynamoDB
   };
 
   try {
-    const data = await s3.listObjectsV2(params).promise();
-
-    const files = data.Contents.map(file => ({
-      key: file.Key,
-      url: `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.Key}`
-    }));
-    res.status(200).json(files);
+      const data = await dynamoDb.scan(params).promise(); // Usa o scan para listar todos os itens
+      const files = data.Items.map(item => ({
+          fileId: item.FileID,
+          versionNumber: item.VersionNumber,
+          metadata: item.Metadata,
+          fileUrl: item.FileUrl,
+          timestamp: item.Timestamp
+      }));
+      res.status(200).json(files);
   } catch (err) {
-    console.error('Error listing files:', err);
-    res.status(500).send('Error listing files');
+      console.error('Error listing file metadata:', err);
+      res.status(500).send('Error listing file metadata');
   }
 });
 
