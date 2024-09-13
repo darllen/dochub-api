@@ -8,7 +8,12 @@ const cors = require('cors');
 const app = express();
 const port = 8080;
 
-app.use(cors()); 
+app.use(cors({
+  origin: 'http://44.196.241.153:3000',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
