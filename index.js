@@ -9,7 +9,7 @@ const app = express();
 const port = 8080;
 
 app.use(cors({
-  origin: 'http://54.173.165.199:3000' 
+  origin: 'http://18.213.66.148:3000' 
 }));
 
 app.use(express.json());
